@@ -55,8 +55,6 @@ def extract_func_name(line):
                     return one
         return None
 
-
-
 stream = os.popen("git log --oneline") 
 logs = stream.read().split('\n')
 
