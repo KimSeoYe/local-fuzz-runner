@@ -7,6 +7,17 @@ def is_valid_name(name):
         return False
     return True
 
+def is_not_ctl_statement(name):
+    if name == "if" or name == "while" or name == "for" or name == "switch":
+        return False
+    return True
+
+def trim_prefix(name):
+    if name[0] == '+' or name[0] == '-':
+        return name[1:]
+    else:
+        return name
+
 def extract_func_name(line):
 #int, __int64, void, char*, char *, struct Node, long long int, (void *)
 #int func(int a, int *b, (char *) c)
@@ -43,7 +54,10 @@ def extract_func_name(line):
     if bracket_num == 1:
         for index in range(len(line_split)):
             if '(' in line_split[index]:
-                return line_split[index - 1]
+                if is_not_ctl_statement(line_split[index - 1]):
+                    return trim_prefix(line_split[index - 1])
+                else:
+                    return None
     else:
         line = re.sub('\(', ' ', line)
         line = re.sub('\)', ' ', line)
@@ -53,7 +67,8 @@ def extract_func_name(line):
             if is_valid_name(one):
                 index += 1
                 if index == 2:
-                    return one
+                    if is_not_ctl_statement(one):
+                        return trim_prefix(one)
         return None
 
 if len(sys.argv) != 2:
@@ -69,7 +84,8 @@ logs = stream.read().split('\n')
 curr_commit_id = logs[0].split(' ')[0]
 prev_commit_id = logs[1].split(' ')[0]
 
-git_diff_cmd = "git diff --function-context " + curr_commit_id + " " + prev_commit_id + " >> ./diff_log"
+git_diff_cmd = "git diff --function-context " + prev_commit_id + " " + curr_commit_id + " >> ./diff_log"
+print("CMD: " + git_diff_cmd)
 os.system(git_diff_cmd)
 
 file = open("./diff_log", 'r')
