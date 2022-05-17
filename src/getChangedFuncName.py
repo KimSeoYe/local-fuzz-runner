@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 
 def is_valid_name(name):
     if re.match("[a-zA-Z_][a-zA-Z0-9_]*", name) == None:
@@ -54,6 +55,13 @@ def extract_func_name(line):
                 if index == 2:
                     return one
         return None
+
+if len(sys.argv) != 2:
+    print("usage: getChangedFuncName [path_of_working_dir]")
+    sys.exit()
+
+workdir_path = sys.argv[1]
+os.chdir(workdir_path)
 
 stream = os.popen("git log --oneline") 
 logs = stream.read().split('\n')
