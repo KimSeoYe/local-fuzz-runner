@@ -1,6 +1,11 @@
+from __future__ import print_function #for python 2.7
+
 import os
 import re
 import sys
+import random
+import string
+import shutil
 
 def is_valid_name(name):
     if re.match("[a-zA-Z_][a-zA-Z0-9_]*", name) == None:
@@ -71,27 +76,82 @@ def extract_func_name(line):
                         return trim_prefix(one)
         return None
 
-if len(sys.argv) != 2:
-    print("usage: getChangedFuncName [path_of_working_dir]")
+def get_changed_func_name(path_for_git):
+
+    origin_workdir = os.getcwd()
+    os.chdir(path_for_git)
+
+    stream = os.popen("git log --oneline") 
+    logs = stream.read().split('\n')
+
+    curr_commit_id = logs[0].split(' ')[0]
+    prev_commit_id = logs[1].split(' ')[0]
+
+    git_diff_cmd = "git diff --function-context " + prev_commit_id + " " + curr_commit_id + " >> ./diff_log"
+    os.system(git_diff_cmd)
+
+    func_names = set()
+
+    f = open("./diff_log", 'r')
+    for line in f.readlines():
+        func_name = extract_func_name(line)
+        if func_name != None and func_name != "main":
+            func_names.add(func_name)
+
+    os.system("rm ./diff_log")
+    os.chdir(origin_workdir)
+    
+    # print("\n[DEBUG] FUNC NAMES ***")
+    # for func_name in set(func_names):
+    #     print(func_name)
+
+    return func_names
+
+def get_random_dirname(len):
+    return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(len))
+
+def get_seeds_for_local_mode(origin_seed_dir, per_func_seed_dir, changed_funcs):
+    new_seed_dir = get_random_dirname(8)
+    os.mkdir(new_seed_dir)
+
+    func_for_seed_lists = os.listdir(per_func_seed_dir)
+
+    files_to_read = []
+    for changed_func in changed_funcs:
+        if changed_func in func_for_seed_lists:
+            files_to_read.append(os.path.join(per_func_seed_dir, changed_func))
+
+    selected_names = set()   
+    for fname in files_to_read:
+        f = open(fname)
+        for line in f.readlines():
+            selected_names.add(line.strip()) 
+
+    selected_seeds = []
+    copied_seeds = []
+
+    for name in selected_names:
+        selected_seeds.append(os.path.join(origin_seed_dir, name))
+        copied_seeds.append(os.path.join(new_seed_dir, name))
+
+    # Q. make tmp dir and copy the seeds?
+    for i in range(len(selected_seeds)):
+        shutil.copyfile(selected_seeds[i], copied_seeds[i])
+
+    return new_seed_dir
+
+################################## MAIN SCRIPT ##################################
+
+if len(sys.argv) != 4:
+    print("usage: python fuzzLocal.py [dirpath_for_git] [origin_seed_dir] [per_func_seed_dir]")
     sys.exit()
 
-workdir_path = sys.argv[1]
-os.chdir(workdir_path)
+path_for_git = os.path.realpath(sys.argv[1])
+origin_seed_dir = os.path.realpath(sys.argv[2])
+per_func_seed_dir = os.path.realpath(sys.argv[3])
 
-stream = os.popen("git log --oneline") 
-logs = stream.read().split('\n')
+changed_funcs = get_changed_func_name(path_for_git)
+local_seeddir_path = get_seeds_for_local_mode(origin_seed_dir, per_func_seed_dir, changed_funcs)
 
-curr_commit_id = logs[0].split(' ')[0]
-prev_commit_id = logs[1].split(' ')[0]
-
-git_diff_cmd = "git diff --function-context " + prev_commit_id + " " + curr_commit_id + " >> ./diff_log"
-print("CMD: " + git_diff_cmd)
-os.system(git_diff_cmd)
-
-file = open("./diff_log", 'r')
-for line in file.readlines():
-    func_name = extract_func_name(line)
-    if func_name != None:
-        print(func_name)
-
-os.system("rm ./diff_log")
+# TMP
+shutil.rmtree(local_seeddir_path)
