@@ -76,7 +76,7 @@ def extract_func_name(line):
                         return trim_prefix(one)
         return None
 
-def get_changed_func_name(path_for_git):
+def get_changed_func_names(path_for_git):
 
     origin_workdir = os.getcwd()
     os.chdir(path_for_git)
@@ -87,7 +87,7 @@ def get_changed_func_name(path_for_git):
     curr_commit_id = logs[0].split(' ')[0]
     prev_commit_id = logs[1].split(' ')[0]
 
-    git_diff_cmd = "git diff --function-context " + prev_commit_id + " " + curr_commit_id + " >> ./diff_log"
+    git_diff_cmd = "git diff --function-context " + prev_commit_id + " " + curr_commit_id + " > ./diff_log"
     os.system(git_diff_cmd)
 
     func_names = set()
@@ -116,10 +116,16 @@ def get_seeds_for_local_mode(origin_seed_dir, per_func_seed_dir, changed_funcs):
 
     func_for_seed_lists = os.listdir(per_func_seed_dir)
 
+    # print("\n[DEBUG] PER FUNC SEED DIR")
+    # for f in func_for_seed_lists:
+    #     print(f)
+
+    # print("\n[DEBUG] CHANGED FUNS")
     files_to_read = []
     for changed_func in changed_funcs:
         if changed_func in func_for_seed_lists:
             files_to_read.append(os.path.join(per_func_seed_dir, changed_func))
+            # print(os.path.join(per_func_seed_dir, changed_func))
 
     selected_names = set()   
     for fname in files_to_read:
@@ -150,8 +156,9 @@ path_for_git = os.path.realpath(sys.argv[1])
 origin_seed_dir = os.path.realpath(sys.argv[2])
 per_func_seed_dir = os.path.realpath(sys.argv[3])
 
-changed_funcs = get_changed_func_name(path_for_git)
+changed_funcs = get_changed_func_names(path_for_git)
 local_seeddir_path = get_seeds_for_local_mode(origin_seed_dir, per_func_seed_dir, changed_funcs)
+print(local_seeddir_path)
 
 # TMP
-shutil.rmtree(local_seeddir_path)
+# shutil.rmtree(local_seeddir_path)
