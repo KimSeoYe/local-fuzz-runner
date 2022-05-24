@@ -1,4 +1,4 @@
-# This module is for define constants
+# This module is for defining constants
 
 DEBUG = False
 
