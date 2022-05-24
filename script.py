@@ -2,9 +2,10 @@ from __future__ import print_function #for python 2.7
 
 import os
 import sys
-import getopt
+import shutil
 import argparse
 import subprocess
+from threading import Timer
 
 import fuzzUtils as utils
 
@@ -29,15 +30,17 @@ def execute_aflpp (aflpp_path, executable_name, local_seeddir_path, is_file_mode
         cmd.append("@@")
 
     env_var = os.environ.copy()
-    env_var["AFL_SKIP_CPUFREQ"] = 1
-    env_var["AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES"] = 1
+    env_var["AFL_SKIP_CPUFREQ"] = "1"
+    env_var["AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES"] = "1"
     
     proc = subprocess.Popen(cmd, env=env_var)
+    timer = Timer(5, proc.kill)
     try:
-        outs, errs = proc.communicate(timeout=30)
-    except TimeoutExpired:
-        proc.kill()
-        outs, errs = proc.communicate()
+        timer.start()
+        proc.wait()
+    finally:
+        timer.cancel()
+
 
 def main () :
 
@@ -53,7 +56,7 @@ def main () :
 
     wkdir_path = os.path.realpath(args.w)
     aflpp_path = os.path.realpath(args.a)
-    executable_name = os.path.realpath(args.x)  # executable must be under the workdir...
+    executable_name = args.x  # executable must be under the workdir...
     origin_seed_dir = os.path.realpath(args.o)
     per_func_seed_dir = os.path.realpath(args.p)
     
