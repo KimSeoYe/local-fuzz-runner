@@ -10,22 +10,10 @@ from threading import Timer
 import fuzzUtils as utils
 
 
-def build_fuzzers (aflpp_path, executable_name) :
-    build_funcov_mode = "CC=" + aflpp_path + "/afl-cc --funcov make"
-    os.system(build_funcov_mode)
-    
-    os.system("mkdir funcov_build")
-    mv_cmd = "mv " + executable_name + " funcov_build" # Could be project-dependent...
-    os.system(mv_cmd)
-
-    build_normal = "CC=" + aflpp_path + "/afl-cc make"
-    os.system(build_normal)
-
-
 def execute_aflpp (aflpp_path, executable_name, local_seeddir_path, is_file_mode) :
 
     afl_fuzz_path = aflpp_path + "/afl-fuzz"
-    cmd = [afl_fuzz_path, "-i", local_seeddir_path, "-o", "local_out", "--funcov", "funcov_build", executable_name]
+    cmd = [afl_fuzz_path, "-i", local_seeddir_path, "-o", "local_out", executable_name]
     if is_file_mode == True:
         cmd.append("@@")
 
@@ -34,12 +22,14 @@ def execute_aflpp (aflpp_path, executable_name, local_seeddir_path, is_file_mode
     env_var["AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES"] = "1"
     
     proc = subprocess.Popen(cmd, env=env_var)
-    timer = Timer(5, proc.kill)
+    timer = Timer(5, proc.kill) # TODO. set timeout value (sec)
     try:
         timer.start()
         proc.wait()
     finally:
         timer.cancel()
+
+    return proc.returncode
 
 
 def main () :
@@ -47,7 +37,7 @@ def main () :
     # Get arguments
     parser = argparse.ArgumentParser()  
     parser.add_argument("-w", help="path of working dir", required=True)
-    parser.add_argument("-a", help="path of afl++", required=True)
+    parser.add_argument("-a", help="path of afl++", required=True) # TODO build afl++ in python script
     parser.add_argument("-x", help="name of executable", required=True)
     parser.add_argument("-o", help="path of origin seed dir", required=True)
     parser.add_argument("-p", help="path of per function seed dir", required=True)
@@ -63,17 +53,28 @@ def main () :
     os.chdir(wkdir_path)
     
     # Build fuzzers
-    build_fuzzers(aflpp_path, executable_name)
+    build_cmd = "CC=" + aflpp_path + "/afl-cc make"
+    os.system(build_cmd)
 
     # Get a new seed directory
     changed_funcs = utils.get_changed_func_names(wkdir_path)
     local_seeddir_path = utils.get_seeds_for_local_mode(origin_seed_dir, per_func_seed_dir, changed_funcs)
     
     # Run afl++ using process
-    execute_aflpp(aflpp_path, executable_name, local_seeddir_path, False)
+    return_code = execute_aflpp(aflpp_path, executable_name, local_seeddir_path, False) # TODO get is_file as an argument
+    print("RETURN CODE = ", return_code, type(return_code))
+    '''
+    TODO use a return code?
+    return code
+    1 => afl-fuzz fail
+    -N => timeout(?)
 
-    # Remove a new seed directory
+    TODO how to detect crash?
+    '''
+
+    # Remove new seed directory and output directory
     shutil.rmtree(local_seeddir_path)
+    shutil.rmtree("local_out")
 
 
 
