@@ -6,6 +6,10 @@ import sys
 import random
 import string
 import shutil
+import subprocess
+from threading import Timer
+
+import const
 
 def is_valid_name(name):
     if re.match("[a-zA-Z_][a-zA-Z0-9_]*", name) == None:
@@ -101,9 +105,10 @@ def get_changed_func_names(path_for_git):
     os.system("rm ./diff_log")
     os.chdir(origin_workdir)
     
-    # print("\n[DEBUG] FUNC NAMES ***")
-    # for func_name in set(func_names):
-    #     print(func_name)
+    if const.DEBUG == True:
+        print("\n[DEBUG] FUNC NAMES ***")
+        for func_name in set(func_names):
+            print(func_name)
 
     return func_names
 
@@ -116,16 +121,18 @@ def get_seeds_for_local_mode(origin_seed_dir, per_func_seed_dir, changed_funcs):
 
     func_for_seed_lists = os.listdir(per_func_seed_dir)
 
-    # print("\n[DEBUG] PER FUNC SEED DIR")
-    # for f in func_for_seed_lists:
-    #     print(f)
+    if const.DEBUG == True:
+        print("\n[DEBUG] PER FUNC SEED DIR")
+        for f in func_for_seed_lists:
+            print(f)
 
-    # print("\n[DEBUG] CHANGED FUNS")
+        print("\n[DEBUG] CHANGED FUNS")
     files_to_read = []
     for changed_func in changed_funcs:
         if changed_func in func_for_seed_lists:
             files_to_read.append(os.path.join(per_func_seed_dir, changed_func))
-            # print(os.path.join(per_func_seed_dir, changed_func))
+            if const.DEBUG == True:
+                print(os.path.join(per_func_seed_dir, changed_func))
 
     selected_names = set()   
     for fname in files_to_read:
@@ -140,10 +147,45 @@ def get_seeds_for_local_mode(origin_seed_dir, per_func_seed_dir, changed_funcs):
         selected_seeds.append(os.path.join(origin_seed_dir, name))
         copied_seeds.append(os.path.join(new_seed_dir, name))
 
-    # Q. make tmp dir and copy the seeds?
     for i in range(len(selected_seeds)):
         shutil.copyfile(selected_seeds[i], copied_seeds[i])
 
     return new_seed_dir
 
 
+'''
+    TODO use a return code?
+    return code
+    1 => afl-fuzz fail
+    -N => timeout or signal
+
+    TODO how to detect crash? : monitoring crash directory
+'''
+def execute_aflpp (aflpp_path, executable_name, local_seeddir_path, is_file_mode) :
+
+    afl_fuzz_path = aflpp_path + "/afl-fuzz"
+    cmd = [afl_fuzz_path, "-i", local_seeddir_path, "-o", const.OUT_DIR, executable_name]
+    if is_file_mode == True:
+        cmd.append("@@")
+
+    env_var = os.environ.copy()
+    env_var["AFL_SKIP_CPUFREQ"] = "1"
+    env_var["AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES"] = "1"
+    
+    if (sys.version_info < (3,3)):
+        proc = subprocess.Popen(cmd, env=env_var)
+        timer = Timer(const.TIMEOUT, proc.kill) 
+        try:
+            timer.start()
+            proc.wait()
+        finally:
+            timer.cancel()
+    else:
+        proc = subprocess.Popen(cmd, env=env_var, stderr=PIPE, stdout=PIPE)
+        try:
+            proc.wait(timeout=const.TIMEOUT)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+    
+
+    return proc.returncode
