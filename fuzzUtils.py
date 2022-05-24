@@ -181,7 +181,7 @@ def execute_aflpp (aflpp_path, executable_name, local_seeddir_path, is_file_mode
         finally:
             timer.cancel()
     else:
-        proc = subprocess.Popen(cmd, env=env_var, stderr=PIPE, stdout=PIPE)
+        proc = subprocess.Popen(cmd, env=env_var, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         try:
             proc.wait(timeout=const.TIMEOUT)
         except subprocess.TimeoutExpired:
