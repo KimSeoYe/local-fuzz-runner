@@ -1,4 +1,5 @@
-from __future__ import print_function #for python 2.7
+from __future__ import print_function
+from asyncio.subprocess import PIPE #for python 2.7
 
 import os
 import sys
@@ -21,13 +22,21 @@ def execute_aflpp (aflpp_path, executable_name, local_seeddir_path, is_file_mode
     env_var["AFL_SKIP_CPUFREQ"] = "1"
     env_var["AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES"] = "1"
     
-    proc = subprocess.Popen(cmd, env=env_var)
-    timer = Timer(5, proc.kill) # TODO. set timeout value (sec)
-    try:
-        timer.start()
-        proc.wait()
-    finally:
-        timer.cancel()
+    if (sys.version_info < (3,3)):
+        proc = subprocess.Popen(cmd, env=env_var)
+        timer = Timer(5, proc.kill) # TODO. set timeout value (sec)
+        try:
+            timer.start()
+            proc.wait()
+        finally:
+            timer.cancel()
+    else:
+        proc = subprocess.Popen(cmd, env=env_var, stderr=PIPE, stdout=PIPE)
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+    
 
     return proc.returncode
 
