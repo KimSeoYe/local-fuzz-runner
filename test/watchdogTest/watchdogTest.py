@@ -3,11 +3,12 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 def on_created(event):
-    print("{event.src_path} has been created") 
+    print(event.src_path, "has been created") 
 
 def main () :
     event_handler = FileSystemEventHandler()
-    
+    event_handler.on_created = on_created
+
     path = "."
     observer = Observer()
     observer.schedule(event_handler, path, recursive=True)
