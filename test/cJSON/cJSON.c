@@ -246,7 +246,7 @@ static cJSON *cJSON_New_Item(const internal_hooks * const hooks)
         memset(node, '\0', sizeof(cJSON));
     }
 
-    // printf("cJSON_New_Item done\n") ;
+    printf("cJSON_New_Item done\n") ;
 
     return node;
 }
