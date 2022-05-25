@@ -10,7 +10,6 @@ import shutil
 import psutil
 import signal
 import subprocess
-from threading import Timer
 from multiprocessing import Process
 
 # TODO. need to install watchdog at GitHub Action Workflow
@@ -161,17 +160,16 @@ def get_seeds_for_local_mode(origin_seed_dir, per_func_seed_dir, changed_funcs):
 
     return new_seed_dir
 
-class CrashOccured (Exception) :
-    def __init__(self, message):
-        super().__init__(message)
-
+crash_occured = 0
 
 def on_created (event) :
     print(event.src_path, "has created")
-    raise CrashOccured(event.src_path)
-
+    global crash_occured
+    crash_occured = 1
 
 def monitor_crash_dir (proc_pid) :
+
+    global crash_occured
     
     event_handler = FileSystemEventHandler()
     event_handler.on_created = on_created
@@ -184,20 +182,19 @@ def monitor_crash_dir (proc_pid) :
 
     observer = Observer()
 
-    try:
-        observer.schedule(event_handler, path, recursive=True)
-        observer.start()
-        while True:
-            time.sleep(1)
-    
-    except CrashOccured:
-        print("CRASH OCCURED")
-        observer.stop()
-        observer.join()
+    observer.schedule(event_handler, path, recursive=True)
+    observer.start()
+    while True:
+        time.sleep(1)
+        if crash_occured == 1: # HERE
+            break
 
-        proc = psutil.Process(proc_pid)
-        proc.kill()
-        sys.exit()
+    observer.stop()
+    observer.join()
+
+    proc = psutil.Process(proc_pid)
+    proc.kill()
+    sys.exit()
 
 '''
     TODO use a return code?
