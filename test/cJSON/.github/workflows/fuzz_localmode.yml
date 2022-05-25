@@ -28,25 +28,23 @@ jobs:
 
       - name: Clone and build AFLplusplus repository
         run: |
-          git clone --depth 1 https://github.com/Hwangwoosam/AFLplusplus.git AFLplusplus
+          git clone --depth 1 https://github.com/AFLplusplus/AFLplusplus.git AFLplusplus
           cd AFLplusplus
           make
 
-      - name: Build fuzzers using AFLplusplus
-        run: |
-          cd afl_fuzz
-          CC="../AFLplusplus/afl-cc --funcov" make
-          mkdir funcov_build
-          mv cJSON_example cJSON_example_file funcov_build
-          make clean
-          CC=../AFLplusplus/afl-cc make
+      # - name: Build fuzzers using AFLplusplus
+      #   run: |
+      #     cd afl_fuzz
+      #     CC="../AFLplusplus/afl-cc --funcov" make
+      #     mkdir funcov_build
+      #     mv cJSON_example cJSON_example_file funcov_build
+      #     make clean
+      #     CC=../AFLplusplus/afl-cc make
       
       - name: Run a afl-fuzz
         run: |
           cd afl_fuzz
-          DIRPATH=$(python fuzzLocal.py ./ ./seed ./tmp_out/default/funcov/per_func_seed)
-          export AFL_SKIP_CPUFREQ=1 AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1
-          ../AFLplusplus/afl-fuzz -i "$DIRPATH" -o local_out --funcov funcov_build ./cJSON_example
+          python script.py -w ./ -a ../AFLplusplus -x cJSON_example -o ./seed -p ./tmp_out/default/funcov/per_func_seed
 
       
 
