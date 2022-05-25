@@ -3,4 +3,4 @@
 DEBUG = False
 
 OUT_DIR = "local_out"
-TIMEOUT = 5
+TIMEOUT = 500
