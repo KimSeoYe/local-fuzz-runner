@@ -3,11 +3,14 @@ from __future__ import print_function #for python 2.7
 import os
 import re
 import sys
+import time
 import random
 import string
 import shutil
+import psutil
 import subprocess
 from threading import Timer
+from multiprocessing import Process
 
 # TODO. need to install watchdog at GitHub Action Workflow
 from watchdog.observers import Observer
@@ -89,7 +92,7 @@ def get_changed_func_names(path_for_git):
     origin_workdir = os.getcwd()
     os.chdir(path_for_git)
 
-    stream = os.popen("git log --oneline") 
+    stream = os.popen("git log --oneline") # TODO. only for source files
     logs = stream.read().split('\n')
 
     curr_commit_id = logs[0].split(' ')[0]
@@ -156,31 +159,38 @@ def get_seeds_for_local_mode(origin_seed_dir, per_func_seed_dir, changed_funcs):
 
     return new_seed_dir
 
-class CrashOccured (Exception) :
-    def __init__(self):
-        super().__init__('AFL++ found a crash')
+class CrashOccured (Exception):
+    def __init__(self, message):
+        super().__init__(message)
 
 def on_created (event) :
-    raise CrashOccured
+    raise CrashOccured(event.src_path)
 
-def monitor_crash_dir () :
+def monitor_crash_dir (proc_pid) :
     event_handler = FileSystemEventHandler()
     event_handler.on_created = on_created
 
-    path = "./" + const.OUT_DIR + "/default/crash"
+    path = "./" + const.OUT_DIR + "/default/crashes"
+    path = os.path.realpath(path)
+
+    while os.path.isdir(path) == False : # polling...
+        time.sleep(1)
+
     observer = Observer()
     observer.schedule(event_handler, path, recursive=True)
 
     observer.start()
 
-    # try:
-    #     while True:
-    #         time.sleep(1)
-    # except KeyboardInterrupt:
-    #     observer.stop()
-    # observer.join()
-
-    return observer
+    try:
+        while True:
+            time.sleep(1)
+    except CrashOccured as e:
+        print("CRASH OCCURED: ", e)
+        observer.stop()
+        observer.join()
+        proc = psutil.Process(proc_pid)
+        proc.kill()
+        sys.exit()
 
 '''
     TODO use a return code?
@@ -203,26 +213,23 @@ def execute_aflpp (aflpp_path, executable_name, local_seeddir_path, is_file_mode
     
     if (sys.version_info < (3,3)):
         proc = subprocess.Popen(cmd, env=env_var)
+        observer_proc = Process(target=monitor_crash_dir, args=(proc.pid,))
+        observer_proc.start()
         timer = Timer(const.TIMEOUT, proc.kill) 
         try:
             timer.start()
             proc.wait()
         finally:
             timer.cancel()
-    else:
-        proc = subprocess.Popen(cmd, env=env_var, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        observer_proc.kill()
+    else:  
         try:
-            # monitor_crash_dir()
-            observer = monitor_crash_dir()
+            proc = subprocess.Popen(cmd, env=env_var, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+            observer_proc = Process(target=monitor_crash_dir, args=(proc.pid,))
+            observer_proc.start()
             proc.wait(timeout=const.TIMEOUT)
         except subprocess.TimeoutExpired:
             proc.kill()
-        except CrashOccured:
-            print("CRASH OCCURED!")
-            observer.stop()
-            observer.join()
-            proc.kill()
-            # issue report
-    
+        observer_proc.kill()
 
     return proc.returncode
