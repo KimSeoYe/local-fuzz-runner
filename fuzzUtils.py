@@ -9,6 +9,10 @@ import shutil
 import subprocess
 from threading import Timer
 
+# TODO. need to install watchdog at GitHub Action Workflow
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
 import const
 
 def is_valid_name(name):
@@ -152,6 +156,31 @@ def get_seeds_for_local_mode(origin_seed_dir, per_func_seed_dir, changed_funcs):
 
     return new_seed_dir
 
+class CrashOccured (Exception) :
+    def __init__(self):
+        super().__init__('AFL++ found a crash')
+
+def on_created (event) :
+    raise CrashOccured
+
+def monitor_crash_dir () :
+    event_handler = FileSystemEventHandler()
+    event_handler.on_created = on_created
+
+    path = "./" + const.OUT_DIR + "/default/crash"
+    observer = Observer()
+    observer.schedule(event_handler, path, recursive=True)
+
+    observer.start()
+
+    # try:
+    #     while True:
+    #         time.sleep(1)
+    # except KeyboardInterrupt:
+    #     observer.stop()
+    # observer.join()
+
+    return observer
 
 '''
     TODO use a return code?
@@ -183,9 +212,14 @@ def execute_aflpp (aflpp_path, executable_name, local_seeddir_path, is_file_mode
     else:
         proc = subprocess.Popen(cmd, env=env_var, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         try:
+            # monitor_crash_dir()
+            observer = monitor_crash_dir()
             proc.wait(timeout=const.TIMEOUT)
         except subprocess.TimeoutExpired:
             proc.kill()
+        except CrashOccured:
+            proc.kill()
+            # issue report
     
 
     return proc.returncode

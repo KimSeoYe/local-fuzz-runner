@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 import os
-import sys
 import shutil
 import argparse
 
@@ -13,7 +12,7 @@ def main () :
     # Get arguments
     parser = argparse.ArgumentParser()  
     parser.add_argument("-w", help="path of working dir", required=True)
-    parser.add_argument("-a", help="path of afl++", required=True) # TODO build afl++ in python script ?
+    parser.add_argument("-a", help="path of afl++", required=True) # Suppose : afl++ is already exist
     parser.add_argument("-x", help="name of executable", required=True)
     parser.add_argument("-o", help="path of origin seed dir", required=True)
     parser.add_argument("-p", help="path of per function seed dir", required=True)
@@ -22,7 +21,7 @@ def main () :
 
     wkdir_path = os.path.realpath(args.w)
     aflpp_path = os.path.realpath(args.a)
-    executable_name = args.x  # executable must be under the workdir...
+    executable_name = args.x  # executable must be under the workdir
     origin_seed_dir = os.path.realpath(args.o)
     per_func_seed_dir = os.path.realpath(args.p)
     
