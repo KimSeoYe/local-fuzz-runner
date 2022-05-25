@@ -8,7 +8,6 @@ import random
 import string
 import shutil
 import psutil
-import signal
 import subprocess
 from multiprocessing import Process
 
@@ -161,6 +160,7 @@ def get_seeds_for_local_mode(origin_seed_dir, per_func_seed_dir, changed_funcs):
     return new_seed_dir
 
 crash_occured = 0
+timeout_occured = 0
 
 def on_created (event) :
     print(event.src_path, "has created")
@@ -201,10 +201,11 @@ def monitor_crash_dir (proc_pid) :
     return code
     1 => afl-fuzz fail
     -N => timeout or signal
-
-    TODO how to detect crash? : monitoring crash directory
 '''
 def execute_aflpp (aflpp_path, executable_name, local_seeddir_path, is_file_mode) :
+
+    global timeout_occured
+    global crash_occured
 
     afl_fuzz_path = aflpp_path + "/afl-fuzz"
     cmd = [afl_fuzz_path, "-i", local_seeddir_path, "-o", const.OUT_DIR, executable_name]
@@ -221,7 +222,11 @@ def execute_aflpp (aflpp_path, executable_name, local_seeddir_path, is_file_mode
         observer_proc.start()
         proc.wait(timeout=const.TIMEOUT)
     except subprocess.TimeoutExpired:
+        timeout_occured = 1
         proc.kill()
-    observer_proc.kill()
+        observer_proc.kill()
 
-    return proc.returncode
+    if timeout_occured == 1 :
+        return const.ExitCond.TIMEOUT
+    elif crash_occured == 1 :
+        return const.ExitCond.CRASH
