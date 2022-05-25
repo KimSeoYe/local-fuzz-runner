@@ -11,7 +11,7 @@ def main () :
 
     path = "."
     observer = Observer()
-    observer.schedule(event_handler, path, recursive=True)
+    observer.schedule(event_handler, path)
 
     observer.start()
     try:

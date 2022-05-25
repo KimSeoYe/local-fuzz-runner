@@ -1,17 +1,21 @@
-from __future__ import print_function #for python 2.7
+from __future__ import print_function
+from ast import Or #for python 2.7
 
 import os
 import re
+from socket import timeout
 import sys
 import time
 import random
 import string
 import shutil
+from tkinter.tix import Tree
 import psutil
-import signal
 import subprocess
 from threading import Timer
-from multiprocessing import Process
+# from multiprocessing import Process
+import threading
+from torch import cartesian_prod
 
 # TODO. need to install watchdog at GitHub Action Workflow
 from watchdog.observers import Observer
@@ -161,15 +165,17 @@ def get_seeds_for_local_mode(origin_seed_dir, per_func_seed_dir, changed_funcs):
 
     return new_seed_dir
 
-class CrashOccured (Exception) :
-    def __init__(self, message):
-        super().__init__(message)
+# class CrashOccured (Exception) :
+#     def __init__(self, message) :
+#         super().__init__(message)
 
+crash_occured = threading.Event()
+timeout_occured = threading.Event()
 
 def on_created (event) :
     print(event.src_path, "has created")
-    raise CrashOccured(event.src_path)
-
+    # raise CrashOccured(event.src_path)
+    crash_occured.set()
 
 def monitor_crash_dir (proc_pid) :
     
@@ -183,21 +189,22 @@ def monitor_crash_dir (proc_pid) :
         time.sleep(1)
 
     observer = Observer()
-
-    try:
-        observer.schedule(event_handler, path, recursive=True)
-        observer.start()
-        while True:
-            time.sleep(1)
+    observer.schedule(event_handler, path, recursive=True)
+    observer.start()
     
-    except CrashOccured:
-        print("CRASH OCCURED")
-        observer.stop()
-        observer.join()
-
-        proc = psutil.Process(proc_pid)
-        proc.kill()
-        sys.exit()
+    while True :
+        time.sleep(1)
+        if crash_occured.is_set() or timeout_occured.is_set():
+                break
+            
+    if const.DEBUG == True :
+        print("\n[DEBUG] TURN OFF THE OBSERVER")
+    
+    observer.stop()
+    observer.join()
+    proc = psutil.Process(proc_pid)
+    proc.kill()
+    return
 
 '''
     TODO use a return code?
@@ -217,14 +224,18 @@ def execute_aflpp (aflpp_path, executable_name, local_seeddir_path, is_file_mode
     env_var = os.environ.copy()
     env_var["AFL_SKIP_CPUFREQ"] = "1"
     env_var["AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES"] = "1"
-    
+     
     try:
         proc = subprocess.Popen(cmd, env=env_var)
-        observer_proc = Process(target=monitor_crash_dir, args=(proc.pid,))
-        observer_proc.start()
+        observer_thread = threading.Thread(target=monitor_crash_dir, args=(proc.pid))
+        observer_thread.daemon = True
+        observer_thread.start()
         proc.wait(timeout=const.TIMEOUT)
     except subprocess.TimeoutExpired:
+        timeout_occured.set()
         proc.kill()
-    observer_proc.kill()
+
+    observer_thread.join()
 
     return proc.returncode
+
