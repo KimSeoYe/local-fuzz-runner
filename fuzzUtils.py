@@ -218,6 +218,7 @@ def execute_aflpp (aflpp_path, executable_name, local_seeddir_path, is_file_mode
         except subprocess.TimeoutExpired:
             proc.kill()
         except CrashOccured:
+            print("CRASH OCCURED!")
             observer.stop()
             observer.join()
             proc.kill()
