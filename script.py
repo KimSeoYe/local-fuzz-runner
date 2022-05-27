@@ -40,10 +40,12 @@ def main () :
     # Run afl++ and monitoring crash directory
     exit_cond = utils.execute_aflpp(aflpp_path, executable_path, local_seeddir_path, False) # TODO get is_file as an argument
     
-    if exit_cond == const.ExitCond.TIMEOUT :
-        print("TIMEOUT")
-    elif exit_cond == const.ExitCond.CRASH :
-        gh.report_issue(executable_path)
+    # if exit_cond == const.ExitCond.TIMEOUT :
+    #     print("TIMEOUT")
+    # elif exit_cond == const.ExitCond.CRASH :
+    #     gh.report_issue(executable_path)
+
+    gh.report_issue(executable_path)    # Intentionally suppose that a crash occurred
     
     # Remove new seed directory and output directory
     shutil.rmtree(local_seeddir_path)

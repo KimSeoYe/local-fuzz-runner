@@ -4,7 +4,7 @@ from enum import Enum
 DEBUG = False
 
 OUT_DIR = "local_out"
-TIMEOUT = 500
+TIMEOUT = 100
 
 class ExitCond (Enum) :
     TIMEOUT = 0
