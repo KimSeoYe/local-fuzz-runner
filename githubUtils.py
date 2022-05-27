@@ -27,7 +27,7 @@ def report_issue (executable_path) :
     
     cmd = "curl --request POST \\\n"
     cmd += "--url https://api.github.com/repos/${{github.repository}}/issues \\\n"
-    cmd += "--header 'authorization: Bearer ${{secrets.TOKEN}}' \\\n"   # TOKEN : user dependent name
+    cmd += "--header 'authorization: Bearer ${{secrets.TOKEN}}' \\\n"   # TODO TOKEN : user dependent name
     cmd += "--header 'content-type: application/json' \\\n"
     cmd += "--data \'{ \"title\": \"" + ISSUE_TITLE + ": ${{github.run_id}} \""
     cmd += "\"body\": \"" + stderr_data + "\" }\'"
