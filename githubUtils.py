@@ -1,5 +1,6 @@
 import os
 import subprocess
+from sys import stderr
 
 import const
 
@@ -24,6 +25,8 @@ def reproduce_crash (executable_path) :
 
 def report_issue (executable_path) :
     stderr_data = reproduce_crash(executable_path)
+    if stderr_data == None :
+        stderr_data = ""
     
     cmd = "curl --request POST \\\n"
     cmd += "--url https://api.github.com/repos/${{github.repository}}/issues \\\n"
