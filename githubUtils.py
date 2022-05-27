@@ -10,7 +10,7 @@ def reproduce_crash (executable_path) :
 
     crash_inputs = os.listdir(crash_path)
 
-    if crash_inputs.index(0) != None :
+    if len(crash_inputs) >= 1 :
         input = open(crash_path + "/" + crash_inputs[0])
         cmd = executable_path
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,stdin=input,stderr=subprocess.PIPE)
