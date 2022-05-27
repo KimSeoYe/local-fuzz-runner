@@ -21,11 +21,19 @@ def reproduce_crash (executable_path) :
         print(stderrdata)
         return stderrdata
 
-'''
-gh issue create --title "Issue title" --body "Issue body" --label "bug"  ...
 
-* use [const.OUT_DIR]/default/crash/[seed_name]
-'''
 def report_issue (executable_path) :
-    reproduce_crash(executable_path)
+    stderr_data = reproduce_crash(executable_path)
+    
+    cmd = "curl --request POST \\\n"
+    cmd += "--url https://api.github.com/repos/${{github.repository}}/issues \\\n"
+    cmd += "--header 'authorization: Bearer ${{secrets.TOKEN}}' \\\n"   # TOKEN : user dependent name
+    cmd += "--header 'content-type: application/json' \\\n"
+    cmd += "--data \'{ \"title\": \"" + ISSUE_TITLE + ": ${{github.run_id}} \""
+    cmd += "\"body\": \"" + stderr_data + "\" }\'"
+
+    proc = subprocess.Popen(cmd)
+    proc.wait()
+
+    print("\nISSUE REPORT IS PUBLISHED")
     return
