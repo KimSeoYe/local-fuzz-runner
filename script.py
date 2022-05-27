@@ -43,7 +43,7 @@ def main () :
     if exit_cond == const.ExitCond.TIMEOUT :
         print("TIMEOUT")
     elif exit_cond == const.ExitCond.CRASH :
-        gh.report_issue()
+        gh.report_issue(executable_path)
     
     # Remove new seed directory and output directory
     shutil.rmtree(local_seeddir_path)
