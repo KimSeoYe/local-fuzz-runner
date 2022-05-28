@@ -26,14 +26,14 @@ def reproduce_crash (executable_path) :
 def report_issue (executable_path) :
     stderr_data = reproduce_crash(executable_path)
     if stderr_data == None :
-        stderr_data = ""
+        stderr_data = "INSERTED BUG"    # TODO temporary string
     
     cmd = "curl --request POST "
     cmd += "--url https://api.github.com/repos/${{github.repository}}/issues "
     cmd += "--header 'authorization: Bearer ${{secrets.TOKEN}}' "   # TODO TOKEN : user dependent name
     cmd += "--header 'content-type: application/json' "
-    cmd += "--data \'{ \"title\": \"" + ISSUE_TITLE + ": ${{github.run_id}} \""
-    cmd += "\"body\": \"" + stderr_data + "\" }\'"
+    cmd += "--data \'{ \"title\": \"" + ISSUE_TITLE + ": ${{github.run_id}} \","
+    cmd += "\"body\": \"" + stderr_data + "\", \"labels\":[\"bug\"] }\'"
 
     proc = subprocess.Popen(cmd)
     proc.wait()
