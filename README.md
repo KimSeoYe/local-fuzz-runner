@@ -1,3 +1,3 @@
-# ServiceCycleTester
+# Local Fuzz Runner
 
-This repo is for studying GitHub action workflows
+This is a helper script for local-mode fuzzing of AFL++

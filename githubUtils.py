@@ -28,10 +28,10 @@ def report_issue (executable_path) :
     if stderr_data == None :
         stderr_data = ""
     
-    cmd = "curl --request POST \\\n"
-    cmd += "--url https://api.github.com/repos/${{github.repository}}/issues \\\n"
-    cmd += "--header 'authorization: Bearer ${{secrets.TOKEN}}' \\\n"   # TODO TOKEN : user dependent name
-    cmd += "--header 'content-type: application/json' \\\n"
+    cmd = "curl --request POST "
+    cmd += "--url https://api.github.com/repos/${{github.repository}}/issues "
+    cmd += "--header 'authorization: Bearer ${{secrets.TOKEN}}' "   # TODO TOKEN : user dependent name
+    cmd += "--header 'content-type: application/json' "
     cmd += "--data \'{ \"title\": \"" + ISSUE_TITLE + ": ${{github.run_id}} \""
     cmd += "\"body\": \"" + stderr_data + "\" }\'"
 
